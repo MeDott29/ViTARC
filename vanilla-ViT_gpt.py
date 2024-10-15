@@ -1,5 +1,9 @@
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import imageio
 
 class VisionTransformer(nn.Module):
     def __init__(self, img_size=224, patch_size=16, num_classes=1000, dim=768, depth=12, heads=12, mlp_dim=3072, dropout=0.1):
@@ -68,3 +72,55 @@ model = VisionTransformer()
 x = torch.randn(1, 3, 224, 224)  # Batch of 1 RGB image of size 224x224
 logits = model(x)
 print(logits.shape)  # Should output torch.Size([1, 1000])
+
+# Create a 3-second animation of model outputs
+os.makedirs("animation_frames", exist_ok=True)
+num_frames = 90  # 3 seconds at 30 frames per second
+
+for i in range(num_frames):
+    frame_path = f"animation_frames/frame_{i:03d}.png"
+    if not os.path.exists(frame_path):
+        # Generate random input and get the model output
+        x = torch.randn(1, 3, 224, 224)
+        logits = model(x).detach().numpy()
+        
+        # Plot the logits as a bar chart
+        fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+        
+        # Logit values bar chart
+        axs[0, 0].bar(range(1000), logits[0], color='blue')
+        axs[0, 0].set_xlim(0, 1000)
+        axs[0, 0].set_ylim(-10, 10)
+        axs[0, 0].set_xlabel("Class Index")
+        axs[0, 0].set_ylabel("Logit Value")
+        axs[0, 0].set_title(f"Model Output Frame {i+1}")
+        
+        # RGB channel visualizations
+        r_channel = x[0, 0].numpy()
+        g_channel = x[0, 1].numpy()
+        b_channel = x[0, 2].numpy()
+        
+        axs[0, 1].imshow(r_channel, cmap='Reds')
+        axs[0, 1].set_title("Red Channel")
+        axs[0, 1].axis('off')
+        
+        axs[1, 0].imshow(g_channel, cmap='Greens')
+        axs[1, 0].set_title("Green Channel")
+        axs[1, 0].axis('off')
+        
+        axs[1, 1].imshow(b_channel, cmap='Blues')
+        axs[1, 1].set_title("Blue Channel")
+        axs[1, 1].axis('off')
+        
+        # Save the frame
+        plt.tight_layout()
+        plt.savefig(frame_path)
+        plt.close()
+
+# Create a GIF from the saved frames
+frame_paths = [f"animation_frames/frame_{i:03d}.png" for i in range(num_frames)]
+frames = [imageio.imread(frame_path) for frame_path in frame_paths if os.path.exists(frame_path)]
+
+imageio.mimsave('model_output_animation.gif', frames, duration=0.1)
+
+print("Animation saved as model_output_animation.gif")
